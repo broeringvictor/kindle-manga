@@ -62,8 +62,9 @@ def _get_size_mb(path: Path) -> float:
 
 
 def _estimate_output(path: Path) -> float:
-    """Estimate KCC output size. Grayscale + resize + mozjpeg typically yields ~50-60% of input."""
-    return _get_size_mb(path) * 0.55
+    """Estimate KCC output size. EPUB with upscale on already-compressed JPEG manga
+    is typically ~1.3x of input size due to EPUB overhead and image reprocessing."""
+    return _get_size_mb(path) * 1.3
 
 
 def _is_image_dir(path: Path) -> bool:
@@ -188,7 +189,6 @@ def build_kcc_command(
         "kcc-c2e",
         "--profile", settings.profile,
         "--format", settings.output_format,
-        "--targetsize", str(settings.max_size_mb + 5),
         "--cropping", settings.cropping,
         "-g", settings.gamma,
         "--output", str(output_dir),
