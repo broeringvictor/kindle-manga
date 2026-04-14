@@ -213,6 +213,31 @@ def build_kcc_command(
     return cmd
 
 
+def _rename_output(output_dir: Path, batch: BatchInfo, total_batches: int, settings: ConvertSettings) -> str | None:
+    """Rename KCC output file from its default name to the desired title.
+    Returns the new filename or None if no file found to rename."""
+    first_input = batch.files[0]
+    base = first_input.stem
+
+    # KCC names fused output as "<first_file> [fused].<ext>"
+    patterns = [
+        f"{base} [fused]",
+        f"{base}",
+    ]
+
+    target_name = _batch_output_name(settings.title, batch.index, total_batches)
+
+    for pattern in patterns:
+        for ext in [".epub", ".mobi", ".cbz", ".pdf"]:
+            candidate = output_dir / f"{pattern}{ext}"
+            if candidate.exists():
+                new_path = output_dir / f"{target_name}{ext}"
+                if candidate != new_path:
+                    candidate.rename(new_path)
+                return new_path.name
+    return None
+
+
 def convert_batch(
     batch: BatchInfo,
     total_batches: int,
@@ -225,7 +250,9 @@ def convert_batch(
 
     try:
         subprocess.run(cmd, check=True, text=True, capture_output=True)
-        return ConvertResult(batch.index, True, "Converted successfully", cmd_str)
+        renamed = _rename_output(output_dir, batch, total_batches, settings)
+        msg = f"Converted -> {renamed}" if renamed else "Converted successfully"
+        return ConvertResult(batch.index, True, msg, cmd_str)
     except FileNotFoundError:
         return ConvertResult(
             batch.index, False,
